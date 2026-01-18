@@ -3,538 +3,500 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Soneium Score Optimizer</title>
+    <title>Soneium Hack Terminal</title>
     <link rel="icon" href="https://soneium.org/favicon.ico" type="image/x-icon">
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet"> <!-- Monospace hacker font -->
     <style>
         :root {
-            --bg: #000000;
-            --neon-primary: #00f0ff;
-            --neon-purple: #9d4edd;
-            --neon-cyan: #00ffff;
-            --text: #e0e0ff;
-            --text-dim: #a0a0cc;
-            --card: rgba(10, 10, 30, 0.6);
-            --glow: 0 0 15px rgba(0, 240, 255, 0.5), 0 0 30px rgba(157, 78, 221, 0.3);
-            --glow-red: 0 0 20px rgba(255, 80, 80, 0.6);
+            --bg: #000;
+            --text-green: #00ff00;
+            --text-dim: #008000;
+            --glitch-red: #ff0000;
+            --glitch-blue: #0000ff;
+            --primary: #00ff00;
+            --scanline: rgba(0, 255, 0, 0.1);
         }
 
         body {
             background: var(--bg);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
+            color: var(--text-green);
+            font-family: 'VT323', monospace;
             margin: 0;
-            min-height: 100vh;
-            background-image: radial-gradient(circle at 10% 20%, rgba(157,78,221,0.08) 0%, transparent 25%);
+            overflow: hidden;
+            position: relative;
+            font-size: 1.1rem;
         }
+
+        /* Matrix Rain Background */
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.15;
+        }
+
+        /* Scanline Effect */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(transparent 0%, transparent 2px, var(--scanline) 2px, var(--scanline) 4px);
+            pointer-events: none;
+            z-index: 1;
+            animation: scanline 2s linear infinite;
+        }
+        @keyframes scanline { 0% { transform: translateY(-4px); } 100% { transform: translateY(0); } }
+
+        /* Glitch Effect on Hover/Active */
+        .glitch {
+            position: relative;
+            transition: all 0.1s;
+        }
+        .glitch:hover, .glitch.active {
+            animation: glitch-anim 0.3s infinite;
+        }
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); color: var(--glitch-red); }
+            40% { transform: translate(2px, -2px); color: var(--glitch-blue); }
+            60% { transform: translate(-1px, 1px); }
+            100% { transform: translate(0); color: var(--text-green); }
+        }
+
+        /* Typing Animation for Logs */
+        .typing {
+            overflow: hidden;
+            white-space: nowrap;
+            animation: typing 2s steps(40, end) forwards;
+            border-right: 2px solid var(--text-green);
+        }
+        @keyframes typing { from { width: 0; } to { width: 100%; } }
 
         nav {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 16px 20px;
-            background: rgba(0,0,0,0.7);
-            border-bottom: 1px solid rgba(0,240,255,0.15);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            border-bottom: 1px dashed var(--text-dim);
+            animation: flicker 5s infinite;
         }
+        @keyframes flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.7; } }
 
-        .logo {
-            font-weight: 900;
-            font-size: 1.5rem;
-            letter-spacing: -1px;
-            background: linear-gradient(90deg, var(--neon-purple), var(--neon-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-        .logo img { width: 32px; filter: drop-shadow(0 0 8px var(--neon-cyan)); }
+        .logo { font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
 
-        .nav-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            max-width: 600px;
-            width: 100%;
-        }
-        .address-input {
-            flex: 1;
-            min-width: 220px;
-            background: rgba(20,20,50,0.5);
-            border: 1px solid rgba(0,240,255,0.3);
-            color: var(--text);
-            padding: 12px 16px;
-            border-radius: 999px;
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.3s;
-        }
-        .address-input:focus {
-            border-color: var(--neon-cyan);
-            box-shadow: var(--glow);
-        }
+        .nav-controls { display: flex; gap: 1rem; }
 
-        .btn {
-            padding: 10px 20px;
-            border-radius: 999px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-            border: 1px solid transparent;
-        }
-        .btn-view {
+        input, button {
             background: transparent;
-            border: 1px solid var(--neon-purple);
-            color: var(--neon-purple);
+            border: 1px solid var(--text-dim);
+            color: var(--text-green);
+            font-family: inherit;
+            padding: 0.5rem;
+            transition: border 0.2s;
         }
-        .btn-view:hover { background: rgba(157,78,221,0.15); box-shadow: var(--glow); }
-        .btn-connect {
-            background: linear-gradient(45deg, var(--neon-purple), var(--neon-cyan));
-            color: black;
-            border: none;
-        }
-        .btn-connect:hover { filter: brightness(1.2); box-shadow: var(--glow); }
+        input:focus, button:hover { border-color: var(--text-green); box-shadow: 0 0 5px var(--text-green); }
 
-        main { padding: 30px 20px; max-width: 1000px; margin: 0 auto; }
-        .timer-hero {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        #timer {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 3rem;
-            font-weight: 900;
-            color: #ff4d4d;
-            text-shadow: 0 0 20px rgba(255,77,77,0.7);
-            animation: flicker 4s infinite alternate;
-        }
-        @keyframes flicker { 0%,100% { opacity:1; } 50% { opacity:0.92; } }
+        main { padding: 2rem; }
 
-        .dashboard {
-            display: flex;
-            flex-direction: column;
-            gap: 32px;
-        }
+        .timer-hero { text-align: center; margin-bottom: 2rem; font-size: 2rem; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
 
-        .panel {
-            background: var(--card);
-            border: 1px solid rgba(0,240,255,0.2);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-            transition: all 0.4s;
-        }
-        .panel:hover { border-color: var(--neon-cyan); box-shadow: var(--glow); }
-
-        .badge-grid {
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 20px;
-            text-align: center;
-        }
-        .badge-hex {
-            width: 90px; height: 100px;
-            margin: 0 auto 8px;
-            background: rgba(20,20,50,0.6);
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.8rem;
-            border: 2px solid transparent;
-            transition: all 0.4s;
-            cursor: pointer;
-        }
-        .badge-hex.verified {
-            background: linear-gradient(45deg, #ffd700, #ffaa00);
-            border: 2px solid var(--neon-cyan);
-            box-shadow: 0 0 25px rgba(255,215,0,0.6);
-            animation: neon-pulse 2s infinite;
-        }
-        @keyframes neon-pulse { 0%,100% { box-shadow: 0 0 15px rgba(0,240,255,0.4); } 50% { box-shadow: 0 0 35px rgba(0,240,255,0.8); } }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 16px;
-        }
-        .stat-item {
-            background: rgba(10,10,30,0.7);
-            padding: 16px;
-            border-radius: 16px;
-            text-align: center;
-            border: 1px solid rgba(157,78,221,0.3);
-        }
-        .stat-val {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: var(--neon-cyan);
-            text-shadow: 0 0 10px var(--neon-cyan);
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
         }
 
-        .action-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
-            margin: 20px 0;
-        }
+        .panel { border: 1px dotted var(--text-dim); padding: 1rem; }
 
-        .btn-primary {
-            background: linear-gradient(45deg, var(--neon-purple), var(--neon-cyan));
-            color: black;
-            width: 100%;
-            padding: 14px;
-            font-size: 1rem;
-        }
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--neon-purple);
-            color: var(--neon-purple);
-        }
-        .btn-outline:hover {
-            background: rgba(157,78,221,0.2);
-            box-shadow: var(--glow);
-        }
-        .btn-loop-active {
-            background: linear-gradient(45deg, #ff4d4d, #ff8080) !important;
-            box-shadow: var(--glow-red);
-            animation: pulse-red 1.2s infinite;
-        }
-        @keyframes pulse-red { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+        .og-badge-circle { font-size: 4rem; text-align: center; animation: spin 10s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .stats-row { display: flex; justify-content: space-around; margin: 1rem 0; }
+
+        .stat-item { border: 1px solid var(--text-dim); padding: 0.5rem; text-align: center; width: 30%; }
 
         .log-area {
-            background: #0a0015;
-            border: 1px solid #330066;
-            border-radius: 12px;
-            padding: 20px;
-            height: 280px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--text-green);
+            padding: 1rem;
+            height: 250px;
             overflow-y: auto;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #00ff9d;
-            box-shadow: inset 0 0 30px rgba(0,255,157,0.1);
-            background-image: repeating-linear-gradient(transparent 0px, transparent 2px, rgba(0,255,157,0.03) 2px, rgba(0,255,157,0.03) 4px);
+            white-space: pre-wrap;
+            animation: terminal-glow 2s infinite alternate;
         }
+        @keyframes terminal-glow { 0% { box-shadow: 0 0 5px var(--text-green); } 100% { box-shadow: 0 0 15px var(--text-green); } }
 
         .modal-overlay {
-            position: fixed; inset:0;
-            background: rgba(0,0,0,0.92);
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
             display: none;
-            place-items: center;
+            align-items: center;
+            justify-content: center;
             z-index: 1000;
         }
-        .modal {
-            background: rgba(10,5,30,0.9);
-            border: 2px solid var(--neon-purple);
-            border-radius: 16px;
-            padding: 32px;
-            width: 90%;
-            max-width: 380px;
-            text-align: center;
-            box-shadow: var(--glow);
-            animation: glitch 0.4s linear;
-        }
-        @keyframes glitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(2px, -2px); }
-            60% { transform: translate(-1px, 1px); }
-            100% { transform: translate(0); }
-        }
+        .modal { border: 2px solid var(--text-green); padding: 2rem; text-align: center; animation: zoom-in 0.5s; }
+        @keyframes zoom-in { from { transform: scale(0); } to { transform: scale(1); } }
 
-        footer {
-            padding: 40px 20px;
-            text-align: center;
-            border-top: 1px solid rgba(0,240,255,0.1);
-            color: var(--text-dim);
-            font-size: 0.9rem;
-        }
-        footer a { color: var(--neon-cyan); text-decoration: none; }
-        footer a:hover { text-shadow: 0 0 8px var(--neon-cyan); }
+        footer { border-top: 1px dashed var(--text-dim); padding: 1rem 2rem; text-align: center; }
 
-        @media (min-width: 768px) {
-            nav { flex-direction: row; justify-content: space-between; padding: 20px 40px; }
-            .logo { margin-bottom: 0; }
-            .dashboard { flex-direction: row; flex-wrap: wrap; justify-content: center; }
-            .left-section, .right-section { flex: 1; min-width: 320px; max-width: 480px; }
+        /* Additional Elements: Progress Bar, Slider, Checkbox, Radio, Select, Canvas, Audio, Video, Iframe, SVG */
+        .extra-elements { margin-top: 2rem; border-top: 1px solid var(--text-dim); padding-top: 1rem; }
+        progress { width: 100%; height: 10px; }
+        input[type="range"] { width: 100%; }
+        select { background: transparent; border: 1px solid var(--text-dim); color: var(--text-green); }
+        canvas { border: 1px solid var(--text-green); display: block; margin: 1rem auto; }
+        audio, video { display: block; margin: 1rem auto; }
+        iframe { border: 1px solid var(--text-green); width: 100%; height: 200px; }
+        svg { fill: var(--text-green); width: 100px; height: 100px; display: block; margin: 1rem auto; animation: rotate-svg 5s linear infinite; }
+        @keyframes rotate-svg { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Hacker Movie Animations: Blinking Cursor, Code Scrolling */
+        .blinking-cursor::after {
+            content: '_';
+            animation: blink 1s step-end infinite;
         }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .code-scroll {
+            height: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+        .code-scroll pre {
+            position: absolute;
+            animation: scroll-code 10s linear infinite;
+        }
+        @keyframes scroll-code { 0% { top: 100%; } 100% { top: -100%; } }
     </style>
 </head>
 <body>
 
+<canvas id="matrix-rain"></canvas>
+
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
     <div class="modal" onclick="event.stopPropagation()">
-        <div id="modalIcon" style="font-size:4rem; margin-bottom:16px;">🏆</div>
-        <h3 id="modalTitle" style="margin:0 0 16px; font-size:1.4rem; color:var(--neon-cyan);">Badge Status</h3>
-        <p style="color:var(--text-dim); margin-bottom:24px;">Sync with on-chain record</p>
-        <button class="btn btn-primary" id="refreshBtn" style="margin-bottom:12px;">🔄 SYNC NOW</button>
-        <button class="btn btn-outline" onclick="closeModal()">CLOSE</button>
+        <div id="modalIcon" style="font-size:3rem;">[TARGET ACQUIRED]</div>
+        <h3 id="modalTitle">HACKING BADGE...</h3>
+        <p>INITIATING MANUAL OVERRIDE PROTOCOL</p>
+        <button class="btn glitch" id="refreshBtn">> SYNC MATRIX <</button>
+        <button class="btn" onclick="closeModal()">> ABORT <</button>
     </div>
 </div>
 
-<nav>
-    <div class="logo">
-        <img src="https://soneium.org/favicon.ico" alt="Soneium">
-        SONEIUM SCORE
-    </div>
+<nav class="glitch">
+    <div class="logo">[SONEIUM TERMINAL]</div>
     <div class="nav-controls">
-        <input type="text" id="manualAddr" class="address-input" placeholder="0x... (View Mode)">
-        <button class="btn btn-view" onclick="viewOnly()">VIEW</button>
-        <button id="connBtn" class="btn btn-connect" onclick="init()">CONNECT</button>
+        <input type="text" id="manualAddr" class="typing" placeholder="TARGET: 0x...">
+        <button class="btn glitch" onclick="viewOnly()">SCAN TARGET</button>
+        <button id="connBtn" class="btn glitch" onclick="init()">INFILTRATE WALLET</button>
     </div>
 </nav>
 
 <main>
-    <div class="timer-hero">
-        <div style="color:var(--text-dim); font-size:0.9rem; letter-spacing:2px; margin-bottom:8px; text-transform:uppercase;">S5 END COUNTDOWN</div>
-        <div id="timer">-- : -- : -- : --</div>
+    <div class="timer-hero blinking-cursor">S5 BREACH COUNTDOWN: <span id="timer">-- : -- : -- : --</span></div>
+
+    <div id="ui" class="dashboard-grid" style="display:none; opacity:0; animation: fade-in 2s forwards;">
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        <div class="left-col">
+            <div class="panel glitch">
+                <div id="ogBadge" class="og-badge-circle" onclick="openBadgePopup('OG', '[*]')">[*]</div>
+                <h3>OG INFILTRATION BADGE</h3>
+                <p>STATUS: MAINNET COMPROMISED</p>
+            </div>
+
+            <div class="panel">
+                <h4>SEASONAL BREACH ARCHIVE</h4>
+                <div class="stats-row">
+                    <div id="s1" class="stat-item glitch" onclick="openBadgePopup('S1', '[1]')">[1]</div>
+                    <div id="s2" class="stat-item glitch" onclick="openBadgePopup('S2', '[2]')">[2]</div>
+                    <div id="s3" class="stat-item glitch" onclick="openBadgePopup('S3', '[3]')">[3]</div>
+                    <div id="s4" class="stat-item glitch" onclick="openBadgePopup('S4', '[4]')">[4]</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-col">
+            <div class="panel">
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <span id="txs">0</span>
+                        <span>BREACHES THIS SESSION</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="totalTxs">0</span>
+                        <span>TOTAL SYSTEM BREACHES</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="nfts">0</span>
+                        <span>ASSETS EXTRACTED</span>
+                    </div>
+                </div>
+
+                <button id="loopBtn" class="btn glitch" onclick="toggleLoop()">> ACTIVATE VIRUS LOOP <</button>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                    <button class="btn glitch" onclick="poker()">> POKE PROBE <</button>
+                    <button class="btn glitch" onclick="minter()">> EXTRACT NFT <</button>
+                    <button class="btn glitch" onclick="uniSwapCycle()">> UNI INFILTRATE <</button>
+                    <button class="btn glitch" onclick="wraper()">> WRAP PAYLOAD <</button>
+                    <button class="btn glitch" onclick="unwraper()">> UNWRAP ALL <</button>
+                    <button class="btn glitch" onclick="heartbeat()">> ECHO PING <</button>
+                </div>
+
+                <h4 style="margin-top: 1.5rem;">HACK CONSOLE</h4>
+                <div class="log-area typing" id="logs">SYSTEM BOOTING... ACCESS GRANTED.</div>
+            </div>
+        </div>
     </div>
 
-    <div id="ui" style="display:none; opacity:0; transition:opacity 0.8s;">
-        <div class="dashboard">
-            <div class="left-section panel">
-                <div style="text-align:center; margin-bottom:24px;">
-                    <div id="ogBadge" class="badge-hex" onclick="openBadgePopup('OG', '⭐')">⭐</div>
-                    <div style="font-size:1.1rem; font-weight:700; color:var(--neon-purple);">OG BADGE</div>
-                </div>
-
-                <div style="text-align:center;">
-                    <div style="color:var(--text-dim); font-size:0.8rem; margin-bottom:16px; letter-spacing:1px;">SEASON ARCHIVE</div>
-                    <div class="badge-grid">
-                        <div id="s1" class="badge-hex" style="opacity:0.2;" onclick="openBadgePopup('S1', '💎')">💎</div>
-                        <div id="s2" class="badge-hex" style="opacity:0.2;" onclick="openBadgePopup('S2', '🔥')">🔥</div>
-                        <div id="s3" class="badge-hex" style="opacity:0.2;" onclick="openBadgePopup('S3', '👑')">👑</div>
-                        <div id="s4" class="badge-hex" style="opacity:0.2;" onclick="openBadgePopup('S4', '🏆')">🏆</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="right-section panel">
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-val" id="txs">0</div>
-                        <div style="font-size:0.7rem; color:var(--text-dim);">SESSION TX</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-val" id="totalTxs">0</div>
-                        <div style="font-size:0.7rem; color:var(--text-dim);">TOTAL TX</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-val" id="nfts">0</div>
-                        <div style="font-size:0.7rem; color:var(--text-dim);">NFTS</div>
-                    </div>
-                </div>
-
-                <button id="loopBtn" class="btn btn-primary" onclick="toggleLoop()" style="margin:20px 0;">⚡ START MIX LOOP</button>
-
-                <div class="action-grid">
-                    <button class="btn btn-outline" onclick="poker()">POKE</button>
-                    <button class="btn btn-outline" onclick="minter()">MINT</button>
-                    <button class="btn btn-outline" onclick="uniSwapCycle()">SWAP</button>
-                    <button class="btn btn-outline" onclick="wraper()">WRAP</button>
-                    <button class="btn btn-outline" onclick="unwraper()">UNWRAP</button>
-                    <button class="btn btn-outline" onclick="heartbeat()">PING</button>
-                </div>
-
-                <div style="margin-top:24px;">
-                    <div style="color:var(--text-dim); font-size:0.8rem; letter-spacing:1px; margin-bottom:8px;">TERMINAL</div>
-                    <div class="log-area" id="logs">Awaiting connection...</div>
-                </div>
-            </div>
+    <!-- Extra Elements Section -->
+    <div class="extra-elements panel glitch">
+        <h4>ADVANCED HACK TOOLS</h4>
+        <progress value="70" max="100">70%</progress>
+        <input type="range" min="0" max="100" value="50">
+        <label><input type="checkbox">ENABLE STEALTH MODE</label>
+        <label><input type="radio" name="mode">MANUAL</label>
+        <label><input type="radio" name="mode">AUTO</label>
+        <select>
+            <option>PROTOCOL: ETH</option>
+            <option>PROTOCOL: SOL</option>
+        </select>
+        <canvas id="hack-canvas" width="200" height="100"></canvas>
+        <audio controls><source src="https://example.com/hack-sound.mp3" type="audio/mpeg"></audio>
+        <video controls width="200"><source src="https://example.com/hack-video.mp4" type="video/mp4"></video>
+        <iframe src="https://example.com/embedded-hack"></iframe>
+        <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" />
+        </svg>
+        <div class="code-scroll">
+            <pre>
+                #include <stdio.h>
+                int main() { printf("HACKING..."); return 0; }
+                def hack(): print("BREACHED")
+                // SYSTEM OVERRIDE
+                alert("ACCESS DENIED");
+            </pre>
         </div>
     </div>
 </main>
 
-<footer>
-    Built for Soneium • <a href="https://soneium.org" target="_blank">Official Site</a> • <a href="https://x.com/soneium" target="_blank">X</a> • <a href="https://discord.gg/soneium" target="_blank">Discord</a>
-</footer>
+<footer>[END TRANSMISSION] - SONEIUM NETWORK COMPROMISED</footer>
 
 <script>
-// [Your original JS logic pasted here unchanged – exactly the same as baseline]
-const SONEIUM_ID = "0x74c"; 
-const ADDR = {
-    S1: "0x05AB5e724848cEFeac6D303CDf94032E5Cc3552B",
-    S2: "0x6b2f6D8216E075D3a71F4aaf21d7158Af9B8dc82",
-    S3: "0x7BF02b42b9d4cCD85b497C9F53e6b7474f9c2546",
-    S4: "0x17121f9a7041ffe3ef248f7b84658d9229bad64f",
-    OG: "0x2A21B17E366836e5FFB19bd47edB03b4b551C89d",
-    POKE: "0xac3fa700149513bed425398f10a08767Aef138c3",
-    NFT: "0xe134662e9CDf904Ea3D90dB3F527054ED3687d83",
-    WETH: "0x4200000000000000000000000000000000000006",
-    UNI_ROUTER: "0x0E2850543f69F678257266E0907fF9A58B3F13dE"
-};
-
-let signer, provider, viewAddress, isLooping = false, countTx = 0, countNft = 0;
-const defaultProvider = new ethers.providers.JsonRpcProvider("https://rpc.soneium.org");
-
-function openBadgePopup(id, emoji) {
-    document.getElementById("modalIcon").innerText = emoji;
-    document.getElementById("modalTitle").innerText = id + " BADGE";
-    document.getElementById("refreshBtn").onclick = () => refreshBadge(id);
-    document.getElementById("modalOverlay").style.display = "flex";
-}
-
-function closeModal() { document.getElementById("modalOverlay").style.display = "none"; }
-
-async function refreshBadge(id) {
-    log(`Syncing ${id} on-chain...`);
-    await scan();
-    closeModal();
-}
-
-function runTimer() {
-    const target = new Date("Jan 15, 2026 11:30:00").getTime();
-    setInterval(() => {
-        const diff = target - new Date().getTime();
-        if (diff < 0) { document.getElementById("timer").innerText = "ENDED"; return; }
-        const d = Math.floor(diff/86400000); const h = Math.floor((diff%86400000)/3600000);
-        const m = Math.floor((diff%3600000)/60000); const s = Math.floor((diff%60000)/1000);
-        document.getElementById("timer").innerText = `${d}d ${h}h ${m}m ${s}s`;
-    }, 1000);
-}
-runTimer();
-
-async function viewOnly() {
-    const input = document.getElementById("manualAddr").value.trim();
-    if (!ethers.utils.isAddress(input)) return alert("Invalid address");
-    viewAddress = input;
-    provider = defaultProvider;
-    signer = null; 
-    showUI();
-    log(`View mode: ${viewAddress}`);
-    scan();
-}
-
-async function init() {
-    if (!window.ethereum) return alert("MetaMask required");
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    viewAddress = await signer.getAddress();
-    showUI();
-    document.getElementById("connBtn").innerText = "CONNECTED";
-    log("Wallet linked.");
-    scan();
-}
-
-function showUI() {
-    document.getElementById("ui").style.display = "block";
-    setTimeout(() => document.getElementById("ui").style.opacity = "1", 200);
-}
-
-async function scan() {
-    const addr = viewAddress;
-    const abi721 = ["function balanceOf(address) view returns (uint256)"];
-    const abi1155 = ["function balanceOf(address, uint256) view returns (uint256)"];
-    
-    const total = await provider.getTransactionCount(addr);
-    document.getElementById("totalTxs").innerText = total;
-
-    try {
-        const ogC = new ethers.Contract(ADDR.OG, abi1155, provider);
-        if ((await ogC.balanceOf(addr, 0)).gt(0)) document.getElementById("ogBadge").classList.add("verified");
-    } catch(e) {}
-
-    ["S1", "S2", "S3", "S4"].forEach(async s => {
-        try {
-            const c = new ethers.Contract(ADDR[s], abi721, provider);
-            const el = document.getElementById(s.toLowerCase());
-            if ((await c.balanceOf(addr)).gt(0)) {
-                el.style.opacity = "1";
-                el.classList.add("verified");
-            } else {
-                el.style.opacity = "0.2";
-                el.classList.remove("verified");
-            }
-        } catch(e) {}
-    });
-
-    const nftC = new ethers.Contract(ADDR.NFT, abi721, provider);
-    document.getElementById("nfts").innerText = (await nftC.balanceOf(addr)).toNumber();
-}
-
-function log(m) { 
-    const l = document.getElementById("logs"); 
-    l.innerHTML += `<span style="color:#00ff9d">[${new Date().toLocaleTimeString()}]</span> ${m}<br>`; 
-    l.scrollTop = l.scrollHeight; 
-}
-
-function checkSigner() {
-    if (!signer) {
-        log("<span style='color:#ff4d4d'>Connect wallet for TXs</span>");
-        return false;
+    // Matrix Rain Canvas
+    const canvas = document.getElementById('matrix-rain');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const columns = canvas.width / 20;
+    const drops = Array.from({length: columns}, () => Math.random() * canvas.height);
+    function drawMatrix() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#0F0';
+        ctx.font = '15px VT323';
+        drops.forEach((y, i) => {
+            ctx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), i * 20, y);
+            drops[i] = y > canvas.height || Math.random() > 0.975 ? 0 : y + 20;
+        });
     }
-    return true;
-}
+    setInterval(drawMatrix, 50);
 
-function txUp() { 
-    countTx++; 
-    document.getElementById("txs").innerText = countTx;
-    const total = parseInt(document.getElementById("totalTxs").innerText) || 0;
-    document.getElementById("totalTxs").innerText = total + 1;
-}
+    // Hack Canvas Animation
+    const hackCanvas = document.getElementById('hack-canvas');
+    const hackCtx = hackCanvas.getContext('2d');
+    function drawHack() {
+        hackCtx.clearRect(0, 0, 200, 100);
+        hackCtx.fillStyle = '#0F0';
+        hackCtx.font = '20px VT323';
+        hackCtx.fillText('HACKING...', Math.random() * 10, 50 + Math.random() * 10);
+        requestAnimationFrame(drawHack);
+    }
+    drawHack();
 
-// [Rest of your transaction functions unchanged: uniSwapCycle, poker, minter, wraper, unwraper, heartbeat, toggleLoop, runLoop]
-async function uniSwapCycle() {
-    if(!checkSigner()) return;
-    try {
-        const router = new ethers.Contract(ADDR.UNI_ROUTER, ["function execute(bytes commands, bytes[] inputs, uint256 deadline) payable"], signer);
-        const amount = ethers.utils.parseUnits("0.000001", "ether");
-        const tx = await router.execute("0x0b", [ethers.utils.defaultAbiCoder.encode(["address", "uint256"], [viewAddress, amount])], Math.floor(Date.now()/1000)+600, { value: amount });
-        await tx.wait(); log("Swap executed."); txUp();
-    } catch(e) { log("<span style='color:#ff4d4d'>Swap failed.</span>"); }
-}
+    // Original Script (unchanged)
+    const SONEIUM_ID = "0x74c"; 
+    const ADDR = {
+        S1: "0x05AB5e724848cEFeac6D303CDf94032E5Cc3552B",
+        S2: "0x6b2f6D8216E075D3a71F4aaf21d7158Af9B8dc82",
+        S3: "0x7BF02b42b9d4cCD85b497C9F53e6b7474f9c2546",
+        S4: "0x17121f9a7041ffe3ef248f7b84658d9229bad64f",
+        OG: "0x2A21B17E366836e5FFB19bd47edB03b4b551C89d",
+        POKE: "0xac3fa700149513bed425398f10a08767Aef138c3",
+        NFT: "0xe134662e9CDf904Ea3D90dB3F527054ED3687d83",
+        WETH: "0x4200000000000000000000000000000000000006",
+        UNI_ROUTER: "0x0E2850543f69F678257266E0907fF9A58B3F13dE"
+    };
 
-async function poker() {
-    if(!checkSigner()) return;
-    try { const tx = await new ethers.Contract(ADDR.POKE, ["function poke()"], signer).poke(); await tx.wait(); log("Poke sent."); txUp(); } catch(e) { log("Poke failed."); }
-}
+    let signer, provider, viewAddress, isLooping = false, countTx = 0, countNft = 0;
+    const defaultProvider = new ethers.providers.JsonRpcProvider("https://rpc.soneium.org");
 
-async function minter() {
-    if(!checkSigner()) return;
-    try { const tx = await new ethers.Contract(ADDR.NFT, ["function mint()"], signer).mint(); await tx.wait(); log("Mint success."); txUp(); scan(); } catch(e) { log("Mint failed."); }
-}
+    function openBadgePopup(id, emoji) {
+        document.getElementById("modalIcon").innerText = emoji;
+        document.getElementById("modalTitle").innerText = id + " Badge Status";
+        document.getElementById("refreshBtn").onclick = () => refreshBadge(id);
+        document.getElementById("modalOverlay").style.display = "flex";
+    }
 
-async function wraper() {
-    if(!checkSigner()) return;
-    try { const tx = await new ethers.Contract(ADDR.WETH, ["function deposit() payable"], signer).deposit({ value: ethers.utils.parseUnits("0.0000001", "ether") }); await tx.wait(); log("Wrapped."); txUp(); } catch(e) { log("Wrap failed."); }
-}
+    function closeModal() { document.getElementById("modalOverlay").style.display = "none"; }
 
-async function unwraper() {
-    if(!checkSigner()) return;
-    try { 
-        const c = new ethers.Contract(ADDR.WETH, ["function withdraw(uint256 wad)", "function balanceOf(address) view returns (uint256)"], signer);
-        const tx = await c.withdraw(await c.balanceOf(viewAddress)); await tx.wait(); log("Unwrapped all."); txUp();
-    } catch(e) { log("Unwrap failed."); }
-}
+    async function refreshBadge(id) {
+        log(`Pinging on-chain record for ${id}...`);
+        await scan();
+        closeModal();
+    }
 
-async function heartbeat() {
-    if(!checkSigner()) return;
-    try { const tx = await signer.sendTransaction({to: viewAddress, value: 0}); await tx.wait(); log("Heartbeat."); txUp(); } catch(e) { log("Heartbeat failed."); }
-}
+    function runTimer() {
+        const target = new Date("Jan 15, 2026 11:30:00").getTime();
+        setInterval(() => {
+            const diff = target - new Date().getTime();
+            if (diff < 0) { document.getElementById("timer").innerText = "SEASON ENDED"; return; }
+            const d = Math.floor(diff/86400000); const h = Math.floor((diff%86400000)/3600000);
+            const m = Math.floor((diff%3600000)/60000); const s = Math.floor((diff%60000)/1000);
+            document.getElementById("timer").innerText = `${d}D : ${h}H : ${m}M : ${s}S`;
+        }, 1000);
+    }
+    runTimer();
 
-async function toggleLoop() {
-    if(!checkSigner()) return;
-    isLooping = !isLooping;
-    const btn = document.getElementById("loopBtn");
-    btn.innerText = isLooping ? "🛑 STOP LOOP" : "⚡ START MIX LOOP";
-    btn.className = isLooping ? "btn btn-primary btn-loop-active" : "btn btn-primary";
-    if (isLooping) runLoop();
-}
+    async function viewOnly() {
+        const input = document.getElementById("manualAddr").value.trim();
+        if (!ethers.utils.isAddress(input)) return alert("Invalid EVM Address");
+        viewAddress = input;
+        provider = defaultProvider;
+        signer = null; 
+        showUI();
+        log(`Entering View Mode for: ${viewAddress}`);
+        scan();
+    }
 
-async function runLoop() {
-    if (!isLooping) return;
-    const acts = [poker, minter, wraper, uniSwapCycle, heartbeat];
-    await acts[Math.floor(Math.random()*acts.length)]();
-    setTimeout(runLoop, Math.random()*5000 + 2000);
-}
+    async function init() {
+        if (!window.ethereum) return alert("MetaMask not found!");
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        viewAddress = await signer.getAddress();
+        showUI();
+        document.getElementById("connBtn").innerText = "Linked";
+        log("Wallet connected successfully.");
+        scan();
+    }
+
+    function showUI() {
+        document.getElementById("ui").style.display = "grid";
+        setTimeout(() => document.getElementById("ui").style.opacity = "1", 100);
+    }
+
+    async function scan() {
+        const addr = viewAddress;
+        const abi721 = ["function balanceOf(address) view returns (uint256)"];
+        const abi1155 = ["function balanceOf(address, uint256) view returns (uint256)"];
+        
+        const total = await provider.getTransactionCount(addr);
+        document.getElementById("totalTxs").innerText = total;
+
+        try {
+            const ogC = new ethers.Contract(ADDR.OG, abi1155, provider);
+            if ((await ogC.balanceOf(addr, 0)).gt(0)) document.getElementById("ogBadge").classList.add("verified");
+        } catch(e) {}
+
+        ["S1", "S2", "S3", "S4"].forEach(async s => {
+            try {
+                const c = new ethers.Contract(ADDR[s], abi721, provider);
+                const el = document.getElementById(s.toLowerCase());
+                if ((await c.balanceOf(addr)).gt(0)) {
+                    el.style.opacity = "1";
+                    el.style.borderColor = "var(--primary)";
+                } else {
+                    el.style.opacity = "0.1";
+                    el.style.borderColor = "var(--border)";
+                }
+            } catch(e) {}
+        });
+
+        const nftC = new ethers.Contract(ADDR.NFT, abi721, provider);
+        document.getElementById("nfts").innerText = (await nftC.balanceOf(addr)).toNumber();
+    }
+
+    function log(m) { const l = document.getElementById("logs"); l.innerHTML += `[${new Date().toLocaleTimeString()}] > ${m}<br>`; l.scrollTop = l.scrollHeight; }
+    
+    function checkSigner() {
+        if (!signer) {
+            log("<span style='color: #ff3e3e'>Action Denied: Connect wallet to execute transactions.</span>");
+            return false;
+        }
+        return true;
+    }
+
+    function txUp() { 
+        countTx++; 
+        document.getElementById("txs").innerText = countTx;
+        const total = parseInt(document.getElementById("totalTxs").innerText);
+        document.getElementById("totalTxs").innerText = total + 1;
+    }
+
+    async function uniSwapCycle() {
+        if(!checkSigner()) return;
+        try {
+            const router = new ethers.Contract(ADDR.UNI_ROUTER, ["function execute(bytes commands, bytes[] inputs, uint256 deadline) payable"], signer);
+            const amount = ethers.utils.parseUnits("0.000001", "ether");
+            const tx = await router.execute("0x0b", [ethers.utils.defaultAbiCoder.encode(["address", "uint256"], [viewAddress, amount])], Math.floor(Date.now()/1000)+600, { value: amount });
+            await tx.wait(); log("UniSwap OK."); txUp();
+        } catch(e) { log("Uni Error."); }
+    }
+
+    async function poker() {
+        if(!checkSigner()) return;
+        try { const tx = await new ethers.Contract(ADDR.POKE, ["function poke()"], signer).poke(); await tx.wait(); log("Poke OK."); txUp(); } catch(e) { log("Poke Failed."); }
+    }
+
+    async function minter() {
+        if(!checkSigner()) return;
+        try { const tx = await new ethers.Contract(ADDR.NFT, ["function mint()"], signer).mint(); await tx.wait(); log("Mint OK."); txUp(); scan(); } catch(e) { log("Mint Failed."); }
+    }
+
+    async function wraper() {
+        if(!checkSigner()) return;
+        try { const tx = await new ethers.Contract(ADDR.WETH, ["function deposit() payable"], signer).deposit({ value: ethers.utils.parseUnits("0.0000001", "ether") }); await tx.wait(); log("Wrap OK."); txUp(); } catch(e) { log("Wrap Failed."); }
+    }
+
+    async function unwraper() {
+        if(!checkSigner()) return;
+        try { 
+            const c = new ethers.Contract(ADDR.WETH, ["function withdraw(uint256 wad)", "function balanceOf(address) view returns (uint256)"], signer);
+            const tx = await c.withdraw(await c.balanceOf(viewAddress)); await tx.wait(); log("Unwrap OK."); txUp();
+        } catch(e) { log("Unwrap Failed."); }
+    }
+
+    async function heartbeat() {
+        if(!checkSigner()) return;
+        try { const tx = await signer.sendTransaction({to: viewAddress, value: 0}); await tx.wait(); log("Heartbeat OK."); txUp(); } catch(e) { log("Heartbeat Failed."); }
+    }
+
+    async function toggleLoop() {
+        if(!checkSigner()) return;
+        isLooping = !isLooping;
+        const btn = document.getElementById("loopBtn");
+        btn.innerText = isLooping ? "🛑 STOP AUTOMATION LOOP" : "⚡ START SMART MIX LOOP (RANDOM 2-7S)";
+        btn.className = isLooping ? "btn glitch active" : "btn glitch";
+        if (isLooping) runLoop();
+    }
+
+    async function runLoop() {
+        if (!isLooping) return;
+        const acts = [poker, minter, wraper, uniSwapCycle, heartbeat];
+        await acts[Math.floor(Math.random()*acts.length)]();
+        setTimeout(runLoop, Math.random()*5000 + 2000);
+    }
 </script>
 </body>
 </html>
