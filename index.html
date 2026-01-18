@@ -3,328 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Soneium Hack Terminal</title>
+    <title>Soneium Score Optimizer</title>
     <link rel="icon" href="https://soneium.org/favicon.ico" type="image/x-icon">
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet"> <!-- Monospace hacker font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #000;
-            --text-green: #00ff00;
-            --text-dim: #008000;
-            --glitch-red: #ff0000;
-            --glitch-blue: #0000ff;
-            --primary: #00ff00;
-            --scanline: rgba(0, 255, 0, 0.1);
+            --bg: #050505; --card: rgba(15,15,15,0.8); --border: rgba(31,31,31,0.5); --primary: #8957e5;
+            --og-gold: linear-gradient(45deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+            --success: #00ff88; --text: #ffffff; --text-dim: #888;
+            --glass-blur: blur(20px); --shadow-neu: 0 4px 6px rgba(0,0,0,0.1), inset 0 1px 3px rgba(255,255,255,0.05);
         }
 
         body {
-            background: var(--bg);
-            color: var(--text-green);
-            font-family: 'VT323', monospace;
-            margin: 0;
-            overflow: hidden;
-            position: relative;
-            font-size: 1.1rem;
+            background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+            margin: 0; display: flex; flex-direction: column; min-height: 100vh;
+            overflow-x: hidden;
         }
-
-        /* Matrix Rain Background */
-        #matrix-rain {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            opacity: 0.15;
-        }
-
-        /* Scanline Effect */
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(transparent 0%, transparent 2px, var(--scanline) 2px, var(--scanline) 4px);
-            pointer-events: none;
-            z-index: 1;
-            animation: scanline 2s linear infinite;
-        }
-        @keyframes scanline { 0% { transform: translateY(-4px); } 100% { transform: translateY(0); } }
-
-        /* Glitch Effect on Hover/Active */
-        .glitch {
-            position: relative;
-            transition: all 0.1s;
-        }
-        .glitch:hover, .glitch.active {
-            animation: glitch-anim 0.3s infinite;
-        }
-        @keyframes glitch-anim {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); color: var(--glitch-red); }
-            40% { transform: translate(2px, -2px); color: var(--glitch-blue); }
-            60% { transform: translate(-1px, 1px); }
-            100% { transform: translate(0); color: var(--text-green); }
-        }
-
-        /* Typing Animation for Logs */
-        .typing {
-            overflow: hidden;
-            white-space: nowrap;
-            animation: typing 2s steps(40, end) forwards;
-            border-right: 2px solid var(--text-green);
-        }
-        @keyframes typing { from { width: 0; } to { width: 100%; } }
 
         nav {
-            display: flex;
-            justify-content: space-between;
-            padding: 1rem 2rem;
-            border-bottom: 1px dashed var(--text-dim);
-            animation: flicker 5s infinite;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 60px; border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.6); backdrop-filter: var(--glass-blur);
+            position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-neu);
         }
-        @keyframes flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.7; } }
+        .logo { font-weight: 900; font-size: 1.2rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+        .logo img { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 10px rgba(137,87,229,0.3); }
+        .logo span { color: var(--primary); background: linear-gradient(45deg, var(--primary), #b57ff5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        .logo { font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
-
-        .nav-controls { display: flex; gap: 1rem; }
-
-        input, button {
-            background: transparent;
-            border: 1px solid var(--text-dim);
-            color: var(--text-green);
-            font-family: inherit;
-            padding: 0.5rem;
-            transition: border 0.2s;
+        .nav-controls { display: flex; gap: 12px; align-items: center; }
+        .address-input { 
+            background: rgba(17,17,17,0.7); border: 1px solid var(--border); color: white; 
+            padding: 12px 16px; border-radius: 16px; font-size: 0.85rem; width: 240px;
+            outline: none; transition: all 0.3s ease; backdrop-filter: blur(5px);
         }
-        input:focus, button:hover { border-color: var(--text-green); box-shadow: 0 0 5px var(--text-green); }
+        .address-input:focus { border-color: var(--primary); box-shadow: 0 0 8px rgba(137,87,229,0.4); transform: scale(1.02); }
 
-        main { padding: 2rem; }
+        main {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            padding: 40px 20px; max-width: 1200px; margin: 0 auto; width: 100%;
+        }
 
-        .timer-hero { text-align: center; margin-bottom: 2rem; font-size: 2rem; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+        .timer-hero { text-align: center; margin-bottom: 40px; animation: fadeIn 1s ease; }
+        #timer { font-family: 'JetBrains Mono', monospace; font-size: 2.8rem; font-weight: 900; color: #ff3e3e; text-shadow: 0 0 10px rgba(255,62,62,0.3); }
 
         .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 2rem;
+            display: grid; grid-template-columns: 1fr 2fr; gap: 32px; width: 100%;
+            transition: opacity 0.5s ease;
         }
 
-        .panel { border: 1px dotted var(--text-dim); padding: 1rem; }
+        .panel { background: var(--card); border: 1px solid var(--border); border-radius: 32px; padding: 28px; backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-neu); transition: transform 0.3s ease; }
+        .panel:hover { transform: translateY(-4px); }
 
-        .og-badge-circle { font-size: 4rem; text-align: center; animation: spin 10s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .og-card { text-align: center; margin-bottom: 24px; }
+        .og-badge-circle {
+            width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 16px;
+            background: rgba(26,26,26,0.8); border: 1px solid rgba(51,51,51,0.5); display: flex;
+            align-items: center; justify-content: center; font-size: 3.5rem;
+            filter: grayscale(1); opacity: 0.3; transition: all 0.5s ease; cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+        .og-badge-circle.verified {
+            background: var(--og-gold); filter: grayscale(0); opacity: 1;
+            border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 0 60px rgba(191,149,63,0.5);
+            animation: gold-shimmer 2.5s infinite ease-in-out;
+        }
+        .og-badge-circle:hover { transform: scale(1.05); }
 
-        .stats-row { display: flex; justify-content: space-around; margin: 1rem 0; }
+        .btn {
+            padding: 14px 28px; border-radius: 16px; border: none; font-weight: 700;
+            cursor: pointer; transition: all 0.3s ease; font-size: 0.95rem;
+            box-shadow: var(--shadow-neu);
+        }
+        .btn-view { background: rgba(34,34,34,0.8); color: #fff; border: 1px solid var(--border); }
+        .btn-view:hover { background: rgba(34,34,34,1); transform: scale(1.03); }
+        .btn-connect { background: linear-gradient(45deg, #fff, #f0f0f0); color: #000; }
+        .btn-connect:hover { box-shadow: 0 0 12px rgba(255,255,255,0.3); }
+        .btn-primary { background: linear-gradient(45deg, var(--primary), #a76df0); color: #fff; width: 100%; margin-bottom: 12px; }
+        .btn-primary:hover { filter: brightness(1.1); transform: scale(1.02); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); width: 100%; margin-bottom: 12px; }
+        .btn-outline:hover { border-color: #666; color: #fff; background: rgba(255,255,255,0.05); transform: scale(1.02); }
+        .btn-loop-active { background: linear-gradient(45deg, #ff3e3e, #ff6b6b) !important; box-shadow: 0 0 24px rgba(255,62,62,0.5); animation: pulse 1.5s infinite; }
 
-        .stat-item { border: 1px solid var(--text-dim); padding: 0.5rem; text-align: center; width: 30%; }
-
+        .stats-row { display: grid; gap: 16px; margin: 24px 0; }
+        .stat-item { background: rgba(0,0,0,0.7); padding: 16px; border-radius: 20px; text-align: center; border: 1px solid var(--border); transition: all 0.3s ease; backdrop-filter: blur(5px); }
+        .stat-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(137,87,229,0.2); }
+        .stat-val { font-size: 1.6rem; font-weight: 900; color: var(--primary); display: block; background: linear-gradient(45deg, var(--primary), #b57ff5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
         .log-area {
-            background: rgba(0,0,0,0.8);
-            border: 1px solid var(--text-green);
-            padding: 1rem;
-            height: 250px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            animation: terminal-glow 2s infinite alternate;
+            background: rgba(0,0,0,0.8); border: 1px solid var(--border); border-radius: 20px;
+            padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+            color: var(--success); height: 320px; overflow-y: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
         }
-        @keyframes terminal-glow { 0% { box-shadow: 0 0 5px var(--text-green); } 100% { box-shadow: 0 0 15px var(--text-green); } }
 
         .modal-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9);
+            display:none; justify-content:center; align-items:center; z-index: 1000; backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease;
         }
-        .modal { border: 2px solid var(--text-green); padding: 2rem; text-align: center; animation: zoom-in 0.5s; }
-        @keyframes zoom-in { from { transform: scale(0); } to { transform: scale(1); } }
-
-        footer { border-top: 1px dashed var(--text-dim); padding: 1rem 2rem; text-align: center; }
-
-        /* Additional Elements: Progress Bar, Slider, Checkbox, Radio, Select, Canvas, Audio, Video, Iframe, SVG */
-        .extra-elements { margin-top: 2rem; border-top: 1px solid var(--text-dim); padding-top: 1rem; }
-        progress { width: 100%; height: 10px; }
-        input[type="range"] { width: 100%; }
-        select { background: transparent; border: 1px solid var(--text-dim); color: var(--text-green); }
-        canvas { border: 1px solid var(--text-green); display: block; margin: 1rem auto; }
-        audio, video { display: block; margin: 1rem auto; }
-        iframe { border: 1px solid var(--text-green); width: 100%; height: 200px; }
-        svg { fill: var(--text-green); width: 100px; height: 100px; display: block; margin: 1rem auto; animation: rotate-svg 5s linear infinite; }
-        @keyframes rotate-svg { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Hacker Movie Animations: Blinking Cursor, Code Scrolling */
-        .blinking-cursor::after {
-            content: '_';
-            animation: blink 1s step-end infinite;
+        .modal {
+            background: rgba(17,17,17,0.9); border: 1px solid var(--primary); border-radius: 32px; padding: 32px;
+            width: 340px; text-align: center; box-shadow: 0 0 40px rgba(137,87,229,0.3); transform: scale(0.95); transition: transform 0.3s ease;
         }
-        @keyframes blink { 50% { opacity: 0; } }
+        .modal-overlay.active .modal { transform: scale(1); }
 
-        .code-scroll {
-            height: 100px;
-            overflow: hidden;
-            position: relative;
+        footer {
+            border-top: 1px solid var(--border); padding: 48px 60px;
+            background: rgba(0,0,0,0.7); display: flex; justify-content: space-between; align-items: flex-start;
+            backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-neu);
         }
-        .code-scroll pre {
-            position: absolute;
-            animation: scroll-code 10s linear infinite;
+        .footer-links h4 { font-size: 0.85rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 16px; }
+        .footer-links a { display: block; color: #fff; text-decoration: none; margin-bottom: 10px; font-size: 0.95rem; opacity: 0.7; transition: all 0.3s ease; }
+        .footer-links a:hover { opacity: 1; color: var(--primary); transform: translateX(4px); }
+
+        @keyframes gold-shimmer { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.04); filter: brightness(1.3); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            nav { padding: 16px 20px; }
+            .nav-controls { flex-direction: column; gap: 8px; width: 100%; }
+            .address-input { width: 100%; }
         }
-        @keyframes scroll-code { 0% { top: 100%; } 100% { top: -100%; } }
     </style>
 </head>
 <body>
 
-<canvas id="matrix-rain"></canvas>
-
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
     <div class="modal" onclick="event.stopPropagation()">
-        <div id="modalIcon" style="font-size:3rem;">[TARGET ACQUIRED]</div>
-        <h3 id="modalTitle">HACKING BADGE...</h3>
-        <p>INITIATING MANUAL OVERRIDE PROTOCOL</p>
-        <button class="btn glitch" id="refreshBtn">> SYNC MATRIX <</button>
-        <button class="btn" onclick="closeModal()">> ABORT <</button>
+        <div id="modalIcon" class="modal-icon" style="font-size:3.2rem;">🏆</div>
+        <h3 id="modalTitle" style="margin:10px 0;">Badge Details</h3>
+        <p style="color:var(--text-dim); font-size:0.85rem; margin-bottom:24px;">Manual verification pings the contract for updates.</p>
+        <button class="btn btn-primary" id="refreshBtn">🔄 SYNC BADGE STATUS</button>
+        <button class="btn btn-outline" style="margin-top:12px;" onclick="closeModal()">CLOSE</button>
     </div>
 </div>
 
-<nav class="glitch">
-    <div class="logo">[SONEIUM TERMINAL]</div>
+<nav>
+    <div class="logo">
+        <img src="https://soneium.org/favicon.ico" alt="Soneium">
+        SONEIUM <span>SCORE</span>
+    </div>
     <div class="nav-controls">
-        <input type="text" id="manualAddr" class="typing" placeholder="TARGET: 0x...">
-        <button class="btn glitch" onclick="viewOnly()">SCAN TARGET</button>
-        <button id="connBtn" class="btn glitch" onclick="init()">INFILTRATE WALLET</button>
+        <input type="text" id="manualAddr" class="address-input" placeholder="Enter EVM Address (0x...)">
+        <button class="btn btn-view" onclick="viewOnly()">View Stats</button>
+        <button id="connBtn" class="btn btn-connect" onclick="init()">Connect Wallet</button>
     </div>
 </nav>
 
 <main>
-    <div class="timer-hero blinking-cursor">S5 BREACH COUNTDOWN: <span id="timer">-- : -- : -- : --</span></div>
+    <div class="timer-hero">
+        <span style="color: var(--text-dim); text-transform: uppercase; letter-spacing: 2.5px; font-size: 0.75rem;">S5 Termination Countdown</span>
+        <div id="timer">-- : -- : -- : --</div>
+    </div>
 
-    <div id="ui" class="dashboard-grid" style="display:none; opacity:0; animation: fade-in 2s forwards;">
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+    <div id="ui" class="dashboard-grid" style="display:none; opacity: 0;">
         <div class="left-col">
-            <div class="panel glitch">
-                <div id="ogBadge" class="og-badge-circle" onclick="openBadgePopup('OG', '[*]')">[*]</div>
-                <h3>OG INFILTRATION BADGE</h3>
-                <p>STATUS: MAINNET COMPROMISED</p>
+            <div class="panel og-card">
+                <div id="ogBadge" class="og-badge-circle" onclick="openBadgePopup('OG', '⭐')">⭐</div>
+                <h3 style="margin:0; font-size: 1.15rem;">OG Badge</h3>
+                <p style="color: var(--text-dim); font-size: 0.8rem;">Verified on Soneium Mainnet</p>
             </div>
 
             <div class="panel">
-                <h4>SEASONAL BREACH ARCHIVE</h4>
-                <div class="stats-row">
-                    <div id="s1" class="stat-item glitch" onclick="openBadgePopup('S1', '[1]')">[1]</div>
-                    <div id="s2" class="stat-item glitch" onclick="openBadgePopup('S2', '[2]')">[2]</div>
-                    <div id="s3" class="stat-item glitch" onclick="openBadgePopup('S3', '[3]')">[3]</div>
-                    <div id="s4" class="stat-item glitch" onclick="openBadgePopup('S4', '[4]')">[4]</div>
+                <h4 style="margin-top:0; font-size: 0.85rem; color: var(--text-dim);">SEASONAL ARCHIVE</h4>
+                <div class="stats-row" style="grid-template-columns: repeat(2, 1fr);">
+                    <div id="s1" class="stat-item" style="opacity:0.1" onclick="openBadgePopup('S1', '💎')">💎<br><small>S1</small></div>
+                    <div id="s2" class="stat-item" style="opacity:0.1" onclick="openBadgePopup('S2', '🔥')">🔥<br><small>S2</small></div>
+                    <div id="s3" class="stat-item" style="opacity:0.1" onclick="openBadgePopup('S3', '👑')">👑<br><small>S3</small></div>
+                    <div id="s4" class="stat-item" style="opacity:0.1" onclick="openBadgePopup('S4', '🏆')">🏆<br><small>S4</small></div>
                 </div>
             </div>
         </div>
 
         <div class="right-col">
             <div class="panel">
-                <div class="stats-row">
+                <div class="stats-row" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="stat-item">
-                        <span id="txs">0</span>
-                        <span>BREACHES THIS SESSION</span>
+                        <span class="stat-val" id="txs">0</span>
+                        <span style="font-size: 0.6rem; color: var(--text-dim);">SESSION TXS</span>
                     </div>
                     <div class="stat-item">
-                        <span id="totalTxs">0</span>
-                        <span>TOTAL SYSTEM BREACHES</span>
+                        <span class="stat-val" id="totalTxs">0</span>
+                        <span style="font-size: 0.6rem; color: var(--text-dim);">TOTAL WALLET TXS</span>
                     </div>
                     <div class="stat-item">
-                        <span id="nfts">0</span>
-                        <span>ASSETS EXTRACTED</span>
+                        <span class="stat-val" id="nfts">0</span>
+                        <span style="font-size: 0.6rem; color: var(--text-dim);">NFT MINTED</span>
                     </div>
                 </div>
 
-                <button id="loopBtn" class="btn glitch" onclick="toggleLoop()">> ACTIVATE VIRUS LOOP <</button>
+                <button id="loopBtn" class="btn btn-primary" onclick="toggleLoop()">⚡ START SMART MIX LOOP (RANDOM 2-7S)</button>
                 
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
-                    <button class="btn glitch" onclick="poker()">> POKE PROBE <</button>
-                    <button class="btn glitch" onclick="minter()">> EXTRACT NFT <</button>
-                    <button class="btn glitch" onclick="uniSwapCycle()">> UNI INFILTRATE <</button>
-                    <button class="btn glitch" onclick="wraper()">> WRAP PAYLOAD <</button>
-                    <button class="btn glitch" onclick="unwraper()">> UNWRAP ALL <</button>
-                    <button class="btn glitch" onclick="heartbeat()">> ECHO PING <</button>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px;">
+                    <button class="btn btn-outline" onclick="poker()">🧪 POKE</button>
+                    <button class="btn btn-outline" onclick="minter()">✨ MINT NFT</button>
+                    <button class="btn btn-outline" onclick="uniSwapCycle()">🦄 UNI SWAP</button>
+                    <button class="btn btn-outline" onclick="wraper()">📥 WRAP</button>
+                    <button class="btn btn-outline" onclick="unwraper()">📤 UNWRAP ALL</button>
+                    <button class="btn btn-outline" onclick="heartbeat()">💓 HEARTBEAT</button>
                 </div>
 
-                <h4 style="margin-top: 1.5rem;">HACK CONSOLE</h4>
-                <div class="log-area typing" id="logs">SYSTEM BOOTING... ACCESS GRANTED.</div>
+                <h4 style="margin: 28px 0 12px 0; font-size: 0.75rem; color: var(--text-dim);">LIVE EXECUTION TERMINAL</h4>
+                <div class="log-area" id="logs">SYSTEM READY... STANDING BY.</div>
             </div>
-        </div>
-    </div>
-
-    <!-- Extra Elements Section -->
-    <div class="extra-elements panel glitch">
-        <h4>ADVANCED HACK TOOLS</h4>
-        <progress value="70" max="100">70%</progress>
-        <input type="range" min="0" max="100" value="50">
-        <label><input type="checkbox">ENABLE STEALTH MODE</label>
-        <label><input type="radio" name="mode">MANUAL</label>
-        <label><input type="radio" name="mode">AUTO</label>
-        <select>
-            <option>PROTOCOL: ETH</option>
-            <option>PROTOCOL: SOL</option>
-        </select>
-        <canvas id="hack-canvas" width="200" height="100"></canvas>
-        <audio controls><source src="https://example.com/hack-sound.mp3" type="audio/mpeg"></audio>
-        <video controls width="200"><source src="https://example.com/hack-video.mp4" type="video/mp4"></video>
-        <iframe src="https://example.com/embedded-hack"></iframe>
-        <svg viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" />
-        </svg>
-        <div class="code-scroll">
-            <pre>
-                #include <stdio.h>
-                int main() { printf("HACKING..."); return 0; }
-                def hack(): print("BREACHED")
-                // SYSTEM OVERRIDE
-                alert("ACCESS DENIED");
-            </pre>
         </div>
     </div>
 </main>
 
-<footer>[END TRANSMISSION] - SONEIUM NETWORK COMPROMISED</footer>
+<footer>
+    <div style="max-width: 320px;">
+        <div class="logo" style="margin-bottom: 16px;">
+            <img src="https://soneium.org/favicon.ico" alt="Soneium">
+            SONEIUM <span>SCORE</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-dim); line-height: 1.7;">Automated utility suite for the Soneium ecosystem. Optimized for Uniswap and official Sony network interactions.</p>
+    </div>
+    
+    <div class="footer-links">
+        <h4>Ecosystem</h4>
+        <a href="https://soneium.org" target="_blank">Official Website</a>
+        <a href="https://bridge.soneium.org" target="_blank">Soneium Bridge</a>
+        <a href="https://soneium.blockscout.com" target="_blank">Block Explorer</a>
+    </div>
+
+    <div class="footer-links">
+        <h4>Socials</h4>
+        <a href="https://x.com/soneium" target="_blank">Twitter / X</a>
+        <a href="https://discord.gg/soneium" target="_blank">Discord Community</a>
+    </div>
+
+    <div class="footer-links">
+        <h4>Support</h4>
+        <a href="https://docs.soneium.org" target="_blank">Documentation</a>
+        <a href="mailto:support@soneium.org">Email Support</a>
+    </div>
+</footer>
 
 <script>
-    // Matrix Rain Canvas
-    const canvas = document.getElementById('matrix-rain');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const columns = canvas.width / 20;
-    const drops = Array.from({length: columns}, () => Math.random() * canvas.height);
-    function drawMatrix() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#0F0';
-        ctx.font = '15px VT323';
-        drops.forEach((y, i) => {
-            ctx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), i * 20, y);
-            drops[i] = y > canvas.height || Math.random() > 0.975 ? 0 : y + 20;
-        });
-    }
-    setInterval(drawMatrix, 50);
-
-    // Hack Canvas Animation
-    const hackCanvas = document.getElementById('hack-canvas');
-    const hackCtx = hackCanvas.getContext('2d');
-    function drawHack() {
-        hackCtx.clearRect(0, 0, 200, 100);
-        hackCtx.fillStyle = '#0F0';
-        hackCtx.font = '20px VT323';
-        hackCtx.fillText('HACKING...', Math.random() * 10, 50 + Math.random() * 10);
-        requestAnimationFrame(drawHack);
-    }
-    drawHack();
-
-    // Original Script (unchanged)
+    // [The original Script logic remains intact as per your Main Code requirement]
     const SONEIUM_ID = "0x74c"; 
     const ADDR = {
         S1: "0x05AB5e724848cEFeac6D303CDf94032E5Cc3552B",
@@ -487,7 +405,7 @@
         isLooping = !isLooping;
         const btn = document.getElementById("loopBtn");
         btn.innerText = isLooping ? "🛑 STOP AUTOMATION LOOP" : "⚡ START SMART MIX LOOP (RANDOM 2-7S)";
-        btn.className = isLooping ? "btn glitch active" : "btn glitch";
+        btn.className = isLooping ? "btn btn-primary btn-loop-active" : "btn btn-primary";
         if (isLooping) runLoop();
     }
 
